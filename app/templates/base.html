@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Welcome to hooper banking</title>
+</head>
+
+<body>
+    <div>
+        <img src="{{ url_for('static', filename='images/logo.png')}}">
+        <a href="{{ url_for('main.home')}}">Home</a>
+        <a href="{{ url_for('main.login')}}">Log In</a>
+        <a href="{{ url_for('main.register')}}">Register</a>
+        <a href="{{ url_for('main.contact_us')}}">Contact us</a>
+    </div>
+    <hr>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <u1>
+        {% for message in messages %}
+        <l1>{{ message }}</l1>
+        {% endfor %}
+    </u1>
+    {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</body>
+
+</html>

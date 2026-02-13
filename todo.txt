@@ -1,0 +1,9 @@
+1. create login and sign up site with html/css
+2. make the other tabs only appear IF they are logged in OR keep it on the central tab 
+3. make a transfer function 
+4. make the sessions thing 
+5. invoke twilio to test phone numbers
+6. make a table that shows incoming transfers
+
+username admin
+password 1111

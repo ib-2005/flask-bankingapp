@@ -1,0 +1,50 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.sqlite
+*.db
+
+# Migrations cache
+migrations/versions/__pycache__/
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node (if you add frontend later)
+node_modules/
+
+# Temp files
+*.tmp
+*.swp

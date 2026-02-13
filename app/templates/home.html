@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Hello, {{ user.username }}!</h1>
+{% for account in accounts %}
+{% if account.type == AccountType.CHECKING %}
+<div>
+    <h2>
+        Checking Account - ${{ account.balance }}
+    </h2>
+</div>
+{% elif account.type == AccountType.SAVINGS %}
+<div>
+    <h2>
+        Savings Account - ${{ account.balance }}
+    </h2>
+</div>
+{% endif %}
+{% endfor %}
+<form action="{{ url_for('main.add_money') }}" method="get">
+    <button type="submit">Add some money</button>
+</form>
+<br>
+<form action="{{ url_for('main.transfer') }}" method="get">
+    <button type="submit">Transfer to somebody...</button>
+</form>
+{% endblock %}

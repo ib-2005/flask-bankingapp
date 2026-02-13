@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Transfer</h1>
+
+<form method="post" novalidate>
+    {{ form.hidden_tag() }}
+
+    <p>
+        {{ form.choice_field.label }}<br>
+        {{ form.choice_field(id="choice_field") }}
+        {% for error in form.choice_field.errors %}
+        <span>{{error }}</span>
+        {% endfor %}
+    </p>
+
+    <!-- USER FIELDS -->
+    <div id="user_field" style="display:none;">
+        <p>
+            {{ form.request_type.label }}<br>
+            {{ form.request_type() }}
+            {% for error in form.request_type.errors %}
+            <span>{{error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.user_field.label }}<br>
+            {{ form.user_field() }}
+            {% for error in form.user_field.errors %}
+            <span>{{error }}</span>
+            {% endfor %}
+        </p>
+    </div>
+
+    <!-- ACCOUNT FIELDS -->
+    <div id="account_fields" style="display:none;">
+        <p>
+            {{ form.account1.label }}<br>
+            {{ form.account1() }}
+            {% for error in form.account1.errors %}
+            <span>{{error }}</span>
+            {% endfor %}
+        </p>
+
+        <p>
+            {{ form.account2.label }}<br>
+            {{ form.account2() }}
+            {% for error in form.account2.errors %}
+            <span>{{error }}</span>
+            {% endfor %}
+        </p>
+    </div>
+    <div id="amount_field" style="display:none;">
+        <p>
+            {{ form.amount.label }}<br>
+            {{ form.amount() }}
+            {% for error in form.amount.errors %}
+            <span>{{error }}</span>
+            {% endfor %}
+        </p>
+    </div>
+
+    <p>{{ form.submit() }}</p>
+</form>
+
+<h1>Incoming Transactions</h1>
+
+<h1>Outgoing Transactions</h1>
+
+<h1>Completed Transactions</h1>
+
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const choice = document.getElementById("choice_field");
+        const userField = document.getElementById("user_field");
+        const accountFields = document.getElementById("account_fields");
+        const amountField = document.getElementById("amount_field");
+
+        function toggleFields() {
+            if (choice.value === "between_users") {
+                userField.style.display = "block";
+                amountField.style.display = "block";
+                accountFields.style.display = "none";
+            }
+            else if (choice.value === "between_accounts") {
+                accountFields.style.display = "block";
+                amountField.style.display = "block";
+                userField.style.display = "none";
+            }
+            else {
+                userField.style.display = "none";
+                accountFields.style.display = "none";
+                amountField.style.display = "none";
+            }
+        }
+
+        choice.addEventListener("change", toggleFields);
+
+        // Initial state
+        toggleFields();
+
+    });
+</script>
+
+
+{% endblock %}

@@ -109,20 +109,21 @@ def transfer():
             sending_account = db.session.scalar(
                 sa.select(Account)
                 .where(Account.user == current_user,
-                    Account.type == AccountType.CHECKING
+                    Account.account_type == AccountType.CHECKING
                 )
             )
 
             receiving_account = db.session.scalar(
                 sa.select(Account)
                 .where(Account.user == to_user,
-                    Account.type == AccountType.CHECKING
+                    Account.account_type == AccountType.CHECKING
                 )
             )
 
             transaction = Transaction(from_account=sending_account, 
                                       to_account=receiving_account, 
-                                      type=TransactionType(form.request_type.data),
+                                      transaction_type=TransactionType.form.request_type.data,
+                                      status = TransactionStatus.PENDING,
                                       amount=form.amount.data)
             db.session.add(transaction)
             db.session.commit()
@@ -145,23 +146,47 @@ def transfer():
             logging.debug(receiving_account)
             transaction = Transaction(from_account=sending_account, 
                                       to_account=receiving_account, 
-                                      transaction_type=TransactionType.SEND, 
+                                      transaction_type=TransactionType.SEND,
+                                      status = TransactionStatus.PENDING, 
                                       amount=form.amount.data)
             db.session.add(transaction)
             db.session.commit()
-            
+
             if transaction.complete_transaction():
-                flash(f'Successfully transferred {transaction.amount}' )
+                flash(f'Successfully transferred ${transaction.amount}' )
             else:
                 flash('Insufficient balance')
                 
             return redirect(url_for('main.transfer'))
-    else:
-        logging.debug(form.errors)
-    return render_template('transfer.html', form=form)
+        
+    
+    transaction_id = request.form.get('transaction_id')
+    action = request.form.get('action')
+
+    transaction = db.session.get(Transaction, transaction_id)
+    
+    if action == 'accept':
+        if transaction.complete_transaction():
+            flash('Transaction successfully completed!')
+        else:
+            flash('Failed to complete transaction')
+
+    if action == 'decline':
+        transaction.cancel_transaction()
+        flash('Transaction successfully declined')
+
+    if action == 'cancel':
+        transaction.cancel_transaction()
+        flash('Transaction successfully cancelled')
+
+
+
+    return render_template('transfer.html', form=form, user=current_user, TransactionType=TransactionType)
+    
 
 
 @bp.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('main.index'))

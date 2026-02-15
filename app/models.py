@@ -7,7 +7,6 @@ from app import db
 from app import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_required
-from flask import flash, redirect, url_for
 import enum
 
 
@@ -50,9 +49,47 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_completed_transactions(self):
+        return db.session.scalars(
+        sa.select(Transaction).where(
+            sa.or_(
+                Transaction.from_account.user_id == self.id,
+                Transaction.to_account.user_id == self.id
+            ),
+            sa.or_(
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.status == TransactionStatus.FAILED
+            )
+        )
+            .order_by(Transaction.time_completed.desc())
+        ).all()
+    
+    def get_incoming_transactions(self):
+        return db.session.scalars(
+            sa.select(Transaction).where(
+                Transaction.from_account.user_id != self.id,
+                Transaction.to_account.user_id == self.id,
+                Transaction.status == TransactionStatus.PENDING
+            )
+        ).all()
+
+    def get_outgoing_transactions(self):
+        return db.session.scalars(
+            sa.select(Transaction).where(
+                Transaction.from_account.user_id == self.id,
+                Transaction.to_account.user_id != self.id,
+                Transaction.status == TransactionStatus.PENDING
+            )
+        ).all()
+
+    #def get_cancelled_transactions(self):
+
  
     def __repr__(self) -> str:
         return '<User {}>'.format(self.username)
+    
+    
     
 
 class Account(db.Model): #make it so that only checking accounts can send transactions
@@ -74,6 +111,8 @@ class Account(db.Model): #make it so that only checking accounts can send transa
         back_populates='from_account',
         foreign_keys='Transaction.from_account_id'
     )
+
+    
 
 
 class Transaction(db.Model):
@@ -103,19 +142,32 @@ class Transaction(db.Model):
     def __repr__(self):
         return f"<Transaction {self.id}: {self.amount} ({self.transaction_type})>"
     
-    def complete_transaction(self) -> bool: #returns true or false based on if the transaction passed or failed 
-        if self.from_account.balance < self.amount:
+    def complete_transaction(self) -> bool: 
+        if self.transaction_type == TransactionType.RECEIVE:
+            FROM_ACCOUNT = self.to_account
+            TO_ACCOUNT = self.from_account
+        else:
+            FROM_ACCOUNT = self.from_account
+            TO_ACCOUNT = self.to_account
+
+        if FROM_ACCOUNT.balance < self.amount:
             self.time_completed = datetime.now(timezone.utc)
             self.status = TransactionStatus.FAILED
             db.session.commit()
             return False
         else:
-            self.from_account.balance -= self.amount
-            self.to_account.balance += self.amount
+            FROM_ACCOUNT.balance -= self.amount
+            TO_ACCOUNT.balance += self.amount
             self.time_completed = datetime.now(timezone.utc)
             self.status = TransactionStatus.POSTED
             db.session.commit()
             return True
+        
+    def cancel_transaction(self):
+        self.time_completed = datetime.now(timezone.utc)
+        self.status = TransactionStatus.CANCELLED
+        db.session.commit()
+        return
 
     def is_internal(self):
         return self.from_account.user_id == self.to_account.user_id

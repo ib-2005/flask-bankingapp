@@ -3,13 +3,13 @@
 {% block content %}
 <h1>Hello, {{ user.username }}!</h1>
 {% for account in accounts %}
-{% if account.type == AccountType.CHECKING %}
+{% if account.account_type == AccountType.CHECKING %}
 <div>
     <h2>
         Checking Account - ${{ account.balance }}
     </h2>
 </div>
-{% elif account.type == AccountType.SAVINGS %}
+{% elif account.account_type == AccountType.SAVINGS %}
 <div>
     <h2>
         Savings Account - ${{ account.balance }}

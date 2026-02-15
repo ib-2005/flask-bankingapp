@@ -7,3 +7,12 @@
 
 username admin
 password 1111
+
+
+users:
+admin
+user2
+
+Form has variable amount of submit_transaction fields
+Each submit_transaction field 
+link each button to a transaction

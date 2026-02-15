@@ -65,9 +65,115 @@
 
 <h1>Incoming Transactions</h1>
 
+<div id="incoming-transactions">
+
+    {% for transaction in user.get_incoming_transactions() %}
+
+    <table class="transaction-table">
+        <tr>
+            <th>To</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Accept</th>
+            <th>Decline</th>
+        </tr>
+
+        <tr>
+            <td>{{ transaction.from_account.user.username }}</td>
+            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.amount }}</td>
+
+            <td>
+                <form method="POST">
+                    <input type="hidden" name="account_id" value="{{ account.id }}">
+                    <button type="submit" name="action" value="{{ accept }}">
+                        Accept
+                    </button>
+                </form>
+            </td>
+            <td>
+                <form method="POST">
+                    <button type="submit" name="action" value="{{ decline }}">
+                        Decline
+                    </button>
+                </form>
+            </td>
+        </tr>
+    </table>
+
+    {% endfor %}
+
+</div>
+
 <h1>Outgoing Transactions</h1>
 
+<div id="outgoing-transactions">
+
+    {% for transaction in user.get_outgoing_transactions() %}
+
+    <table class="transaction-table">
+        <tr>
+            <th>From</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Cancel</th>
+        </tr>
+
+        <tr>
+            <td>{{ transaction.to_account.user.username }}</td>
+            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.amount }}</td>
+
+            <td>
+                <form method="POST">
+                    <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+                    <button type="submit" name="action" value="{{ cancel }}">
+                        Cancel
+                    </button>
+                </form>
+            </td>
+        </tr>
+    </table>
+
+    {% endfor %}
+
+</div>
+
+
 <h1>Completed Transactions</h1>
+<!-- Include from in incoming transactions, to in outgoing transactions, and both in internal ones
+     Make each transaction an individual table -->
+<div id="completed_transactions">
+    {% for transaction in user.get_completed_transactions() %}
+
+    <table class="transaction-table">
+        <tr>
+            {% if transaction.is_internal() %}
+            <th>To</th>
+            <th>From</th>
+            {% elif transaction.transaction_type == TransactionType.SEND%}
+            <th>To</th>
+            {% else %}
+            <th>From</th>
+            {% endif %}
+
+            <th>Type</th>
+            <th>Amount</th>
+        </tr>
+        <tr>
+            {% if transaction.is_internal() %}
+            <td>transaction.from_account.account_type</td>
+            <td>transaction.to_account.account_type</td>
+            {% elif transaction.transaction_type == TransactionType.SEND%}
+            <td>transaction.to_account.user.username</td>
+            {% else %}
+            <td>transaction.from_account.user.username</td>
+            {% endif %}
+            <td>{{ transaction.to_account.user.username }}</td>
+            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.amount }}</td>
+        </tr>
+</div>
 
 
 

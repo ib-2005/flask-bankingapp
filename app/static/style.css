@@ -15,3 +15,14 @@ h2 {
     color: red;
     font-size: 20px;
 }
+
+table,
+th,
+td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.transaction-table {
+    margin-bottom: 20px;
+}

@@ -3,6 +3,7 @@ from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from sqlalchemy import Numeric, Enum
+from sqlalchemy.orm import aliased
 from app import db
 from app import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -51,39 +52,66 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
     
     def get_completed_transactions(self):
+        FROM_ACCOUNT = aliased(Account)
+        TO_ACCOUNT = aliased(Account)
+
+
         return db.session.scalars(
-        sa.select(Transaction).where(
-            sa.or_(
-                Transaction.from_account.user_id == self.id,
-                Transaction.to_account.user_id == self.id
-            ),
-            sa.or_(
-                Transaction.status == TransactionStatus.POSTED,
-                Transaction.status == TransactionStatus.FAILED
+            sa.select(Transaction)
+            .join(FROM_ACCOUNT, Transaction.from_account_id == FROM_ACCOUNT.id)
+            .join(TO_ACCOUNT, Transaction.to_account_id == TO_ACCOUNT.id)
+            .where(
+                sa.or_(
+                    FROM_ACCOUNT.user_id == self.id,
+                    TO_ACCOUNT.user_id == self.id
+                ),
+                sa.or_(
+                    Transaction.status == TransactionStatus.POSTED,
+                    Transaction.status == TransactionStatus.FAILED
+                )
             )
-        )
-            .order_by(Transaction.time_completed.desc())
-        ).all()
+                .order_by(Transaction.time_completed.desc())
+            ).all()
     
     def get_incoming_transactions(self):
         return db.session.scalars(
-            sa.select(Transaction).where(
-                Transaction.from_account.user_id != self.id,
-                Transaction.to_account.user_id == self.id,
+            sa.select(Transaction)
+            .join(Account, Transaction.to_account_id == Account.id)
+            .where(
+                Account.user_id == self.id,
+                Transaction.from_account_id != Transaction.to_account_id,
                 Transaction.status == TransactionStatus.PENDING
             )
         ).all()
 
     def get_outgoing_transactions(self):
         return db.session.scalars(
-            sa.select(Transaction).where(
-                Transaction.from_account.user_id == self.id,
-                Transaction.to_account.user_id != self.id,
+            sa.select(Transaction)
+            .join(Account, Transaction.from_account_id == Account.id)
+            .where(
+                Account.user_id == self.id,
+                Transaction.from_account_id != Transaction.to_account_id,
                 Transaction.status == TransactionStatus.PENDING
             )
         ).all()
 
-    #def get_cancelled_transactions(self):
+    def get_cancelled_transactions(self):
+        FROM_ACCOUNT = aliased(Account)
+        TO_ACCOUNT = aliased(Account)
+
+        return db.session.scalars(
+            sa.select(Transaction)
+            .join(FROM_ACCOUNT, Transaction.from_account_id == FROM_ACCOUNT.id)
+            .join(TO_ACCOUNT, Transaction.to_account_id == TO_ACCOUNT.id)
+            .where(
+                sa.or_(
+                    FROM_ACCOUNT.user_id == self.id,
+                    TO_ACCOUNT.user_id == self.id
+                ),
+                Transaction.status == TransactionStatus.CANCELLED
+            )
+            .order_by(Transaction.time_completed.desc())
+        ).all()
 
  
     def __repr__(self) -> str:

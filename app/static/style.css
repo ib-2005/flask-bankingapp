@@ -26,3 +26,14 @@ td {
 .transaction-table {
     margin-bottom: 20px;
 }
+
+.transaction-table th,
+.transaction-table td {
+    padding: 5px;
+}
+
+table {
+    width: 20%;
+    margin: 15px left;
+    border-collapse: collapse;
+}

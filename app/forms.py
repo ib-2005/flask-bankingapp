@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, DecimalField, SubmitField, SelectField
+from wtforms import StringField, PasswordField, BooleanField, DecimalField, SubmitField, SelectField, HiddenField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
 from app.models import User, Account, Transaction
 from app.extensions import db
@@ -150,7 +150,18 @@ class TransferForm(FlaskForm):
             return False
 
         return True
+    
+#below three are solely for CSRF
 
+class AcceptForm(FlaskForm):
+    transaction_id = HiddenField()
+    submit = SubmitField("Accept")
 
+class DeclineForm(FlaskForm):
+    transaction_id = HiddenField()
+    submit = SubmitField("Decline")
 
+class CancelForm(FlaskForm):
+    transaction_id = HiddenField()
+    submit = SubmitField("Cancel")
 

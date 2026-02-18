@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_user, logout_user, login_required
 from decimal import Decimal
-from app.forms import LoginForm, RegistrationForm, MoneyForm, TransferForm
+from app.forms import LoginForm, RegistrationForm, MoneyForm, TransferForm, AcceptForm, DeclineForm, CancelForm
 from app.models import User, Account, Transaction, Session, AccountType, TransactionStatus, TransactionType
 from app.extensions import db
 from urllib.parse import urlsplit
@@ -94,6 +94,30 @@ def add_money():
 @login_required
 def transfer():
     form = TransferForm()
+    action = request.form.get('action')
+
+    if action in ["accept", "decline", "cancel"]:
+        transaction_id = request.form.get('transaction_id')
+
+        if not transaction_id:
+            flash("Missing transaction id")
+
+        transaction = db.session.get(Transaction, int(transaction_id))
+
+        if action == 'accept':
+            if transaction.complete_transaction():
+                flash('Transaction successfully completed')
+            else:
+                flash('Failed to complete transaction')
+
+        if action == 'decline':
+            transaction.cancel_transaction()
+            flash('Transaction successfully declined')
+
+        if action == 'cancel':
+            transaction.cancel_transaction()
+            flash('Transaction succesfully cancelled')
+
     if form.validate_on_submit():
         logging.debug("testingu1298123")
         if form.choice_field.data == "between_users":
@@ -122,13 +146,13 @@ def transfer():
 
             transaction = Transaction(from_account=sending_account, 
                                       to_account=receiving_account, 
-                                      transaction_type=TransactionType.form.request_type.data,
+                                      transaction_type=TransactionType(form.request_type.data),
                                       status = TransactionStatus.PENDING,
                                       amount=form.amount.data)
             db.session.add(transaction)
             db.session.commit()
 
-        elif form.choice_field.data == "between_accounts":
+        if form.choice_field.data == "between_accounts":
             logging.debug('between_accounts')
             sending_account = db.session.scalar(
                 sa.select(Account)
@@ -158,30 +182,8 @@ def transfer():
                 flash('Insufficient balance')
                 
             return redirect(url_for('main.transfer'))
-        
-    
-    transaction_id = request.form.get('transaction_id')
-    action = request.form.get('action')
 
-    transaction = db.session.get(Transaction, transaction_id)
-    
-    if action == 'accept':
-        if transaction.complete_transaction():
-            flash('Transaction successfully completed!')
-        else:
-            flash('Failed to complete transaction')
-
-    if action == 'decline':
-        transaction.cancel_transaction()
-        flash('Transaction successfully declined')
-
-    if action == 'cancel':
-        transaction.cancel_transaction()
-        flash('Transaction successfully cancelled')
-
-
-
-    return render_template('transfer.html', form=form, user=current_user, TransactionType=TransactionType)
+    return render_template('transfer.html', form=form, user=current_user, TransactionType=TransactionType, AccountType=AccountType)
     
 
 

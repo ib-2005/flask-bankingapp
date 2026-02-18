@@ -71,7 +71,7 @@
 
     <table class="transaction-table">
         <tr>
-            <th>To</th>
+            <th>From</th>
             <th>Type</th>
             <th>Amount</th>
             <th>Accept</th>
@@ -80,20 +80,28 @@
 
         <tr>
             <td>{{ transaction.from_account.user.username }}</td>
-            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.transaction_type.value }}</td>
             <td>{{ transaction.amount }}</td>
 
             <td>
-                <form method="POST">
-                    <input type="hidden" name="account_id" value="{{ account.id }}">
-                    <button type="submit" name="action" value="{{ accept }}">
+                <form method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+
+                    <button type="submit" name="action" value="accept">
                         Accept
                     </button>
                 </form>
             </td>
             <td>
-                <form method="POST">
-                    <button type="submit" name="action" value="{{ decline }}">
+                <form method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+
+
+                    <button type="submit" name="action" value="decline">
                         Decline
                     </button>
                 </form>
@@ -113,7 +121,7 @@
 
     <table class="transaction-table">
         <tr>
-            <th>From</th>
+            <th>To</th>
             <th>Type</th>
             <th>Amount</th>
             <th>Cancel</th>
@@ -121,13 +129,15 @@
 
         <tr>
             <td>{{ transaction.to_account.user.username }}</td>
-            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.transaction_type.value.capitalize() }}</td>
             <td>{{ transaction.amount }}</td>
 
             <td>
-                <form method="POST">
+                <form method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
-                    <button type="submit" name="action" value="{{ cancel }}">
+                    <button type="submit" name="action" value="cancel">
                         Cancel
                     </button>
                 </form>
@@ -148,31 +158,70 @@
 
     <table class="transaction-table">
         <tr>
-            {% if transaction.is_internal() %}
+            <!--{% if transaction.is_internal() %}
             <th>To</th>
             <th>From</th>
             {% elif transaction.transaction_type == TransactionType.SEND%}
             <th>To</th>
             {% else %}
             <th>From</th>
-            {% endif %}
-
+            {% endif %}-->
+            <th>To</th>
+            <th>From</th>
             <th>Type</th>
             <th>Amount</th>
+            <th>Status</th>
         </tr>
         <tr>
             {% if transaction.is_internal() %}
-            <td>transaction.from_account.account_type</td>
-            <td>transaction.to_account.account_type</td>
-            {% elif transaction.transaction_type == TransactionType.SEND%}
-            <td>transaction.to_account.user.username</td>
+            <td>{{transaction.from_account.account_type.value.capitalize()}}</td>
+            <td>{{transaction.to_account.account_type.value.capitalize()}}</td>
             {% else %}
-            <td>transaction.from_account.user.username</td>
+            <td>{{transaction.to_account.user.username}}</td>
+            <td>{{transaction.from_account.user.username}}</td>
             {% endif %}
-            <td>{{ transaction.to_account.user.username }}</td>
-            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.transaction_type.value.capitalize() }}</td>
             <td>{{ transaction.amount }}</td>
+            <td>{{ transaction.status.value}}</td>
         </tr>
+        {% endfor %}
+</div>
+
+<h1>Cancelled Transactions</h1>
+<!-- Include from in incoming transactions, to in outgoing transactions, and both in internal ones
+     Make each transaction an individual table -->
+<div id="cancelled_transactions">
+    {% for transaction in user.get_cancelled_transactions() %}
+
+    <table class="transaction-table">
+        <tr>
+            <!--{% if transaction.is_internal() %}
+            <th>To</th>
+            <th>From</th>
+            {% elif transaction.transaction_type == TransactionType.SEND%}
+            <th>To</th>
+            {% else %}
+            <th>From</th>
+            {% endif %}-->
+            <th>To</th>
+            <th>From</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            {% if transaction.is_internal() %}
+            <td>{{transaction.from_account.account_type.value.capitalize()}}</td>
+            <td>{{transaction.to_account.account_type.value.capitalize()}}</td>
+            {% else %}
+            <td>{{transaction.to_account.user.username}}</td>
+            <td>{{transaction.from_account.user.username}}</td>
+            {% endif %}
+            <td>{{ transaction.transaction_type.value.capitalize() }}</td>
+            <td>{{ transaction.amount }}</td>
+            <td>{{ transaction.status.value}}</td>
+        </tr>
+        {% endfor %}
 </div>
 
 

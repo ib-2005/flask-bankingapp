@@ -151,17 +151,32 @@ class TransferForm(FlaskForm):
 
         return True
     
-#below three are solely for CSRF
+class RequestResetForm(FlaskForm):
+    email = StringField(
+        "Enter a valid email",
+        validators=[
+            DataRequired(),
+            Email()
+        ]
+    )
+    
+    next = SubmitField('Next')
 
-class AcceptForm(FlaskForm):
-    transaction_id = HiddenField()
-    submit = SubmitField("Accept")
 
-class DeclineForm(FlaskForm):
-    transaction_id = HiddenField()
-    submit = SubmitField("Decline")
+class VerifyCodeForm(FlaskForm):
+    code = StringField(
+        "Enter the recovery code",
+        validators=[
+            DataRequired(),
+            Length(min=6, max=6)
+        ]
+    )
 
-class CancelForm(FlaskForm):
-    transaction_id = HiddenField()
-    submit = SubmitField("Cancel")
+    submit = SubmitField('Submit')
+
+class ResetPasswordForm(FlaskForm):
+    new_password = PasswordField('New Password', validators=[DataRequired()])
+    new_password2 = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password')])
+    
+    submit = SubmitField('Register')
 

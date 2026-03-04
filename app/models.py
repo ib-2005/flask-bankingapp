@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
@@ -8,6 +8,7 @@ from app import db
 from app import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_required
+from flask import session
 import enum
 
 
@@ -24,6 +25,12 @@ class TransactionStatus(enum.Enum):
 class TransactionType(enum.Enum):
     SEND = "send"
     RECEIVE = "receive"
+
+class VerificationCodePurpose(enum.Enum):
+    RESET_PASSWORD = "reset_password"
+    SUSPICIOUS_LOGIN = "suspicious_login"
+    TRANSACTION = "transaction"
+
 
 @login_manager.user_loader
 def load_user(id):
@@ -42,6 +49,10 @@ class User(UserMixin, db.Model):
         back_populates='user'
     )
     accounts: so.Mapped[list['Account']] = so.relationship(
+        back_populates='user'
+    )
+
+    verification_codes: so.WriteOnlyMapped[list['VerificationCode']] = so.relationship(
         back_populates='user'
     )
 
@@ -112,13 +123,20 @@ class User(UserMixin, db.Model):
             )
             .order_by(Transaction.time_completed.desc())
         ).all()
+    
+    def get_active_code(self):
+        return db.session.scalar(
+            sa.select(VerificationCode)
+            .where(VerificationCode.user_id == self.id,
+                   VerificationCode.expires_at > datetime.now(timezone.utc),
+                   VerificationCode.used == False
+                )
+            )
 
  
     def __repr__(self) -> str:
         return '<User {}>'.format(self.username)
-    
-    
-    
+
 
 class Account(db.Model): #make it so that only checking accounts can send transactions
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
@@ -162,10 +180,11 @@ class Transaction(db.Model):
     amount: so.Mapped[Numeric] = so.mapped_column(Numeric(12, 2),
                                                   nullable = False)
     status: so.Mapped[TransactionStatus] = so.mapped_column(sa.Enum(TransactionStatus))
-    time_initiated: so.Mapped[datetime] = so.mapped_column(index=True, 
-                                                           default=lambda: datetime.now(timezone.utc))
-    time_completed: so.Mapped[datetime] = so.mapped_column(index=True, 
-                                                           default=lambda: datetime.now(timezone.utc))
+    time_initiated: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                           default=lambda: datetime.now(timezone.utc),
+                                                           nullable=False)
+    time_completed: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                           nullable=True)
     
     def __repr__(self):
         return f"<Transaction {self.id}: {self.amount} ({self.transaction_type})>"
@@ -201,6 +220,34 @@ class Transaction(db.Model):
         return self.from_account.user_id == self.to_account.user_id
 
 
+class VerificationCode(db.Model):
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey(User.id),
+                                                index=True)
+    user: so.Mapped[User] = so.relationship(
+        back_populates='verification_codes'
+    )
+    code_hash: so.Mapped[str] = so.mapped_column(sa.String(255), nullable=True)
+    purpose: so.Mapped[VerificationCodePurpose] = so.mapped_column(sa.Enum(VerificationCodePurpose))
+    created_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                           default=lambda: datetime.now(timezone.utc),
+                                                           nullable=False)
+    expires_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                       default=lambda: datetime.now(timezone.utc) + timedelta(minutes=10),
+                                                           nullable=True)
+    used: so.Mapped[bool] = so.mapped_column(sa.Boolean,
+                                              default=False)
+    
+    def set_code_hash(self, password):
+        self.code_hash = generate_password_hash(password)
+
+    def check_code(self, password):
+        return check_password_hash(self.code_hash, password)
+    
+    
+    #get all active verification codes
+
 
 class Session(db.Model): 
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
@@ -212,8 +259,9 @@ class Session(db.Model):
     )
     
     ip: so.Mapped[str] = so.mapped_column(sa.String(45))
-    starting_time: so.Mapped[datetime] = so.mapped_column(index=True, 
-                                                           default=lambda: datetime.now(timezone.utc))
-    ending_time: so.Mapped[datetime] = so.mapped_column(index=True, 
-                                                           default=lambda: datetime.now(timezone.utc))
+    starting_time: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                           default=lambda: datetime.now(timezone.utc),
+                                                           nullable=False)
+    ending_time: so.Mapped[datetime] = so.mapped_column(sa.DateTime(timezone=True),
+                                                           nullable=True)
 

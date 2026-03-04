@@ -1,8 +1,8 @@
-"""first migration
+"""first table
 
-Revision ID: a005547ea775
+Revision ID: 84b105b491a8
 Revises: 
-Create Date: 2026-02-13 17:22:20.631131
+Create Date: 2026-02-22 00:59:29.290395
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a005547ea775'
+revision = '84b105b491a8'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -56,6 +56,22 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_session_starting_time'), ['starting_time'], unique=False)
         batch_op.create_index(batch_op.f('ix_session_user_id'), ['user_id'], unique=False)
 
+    op.create_table('verification_code',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('code_hash', sa.String(length=255), nullable=False),
+    sa.Column('purpose', sa.Enum('RESET_PASSWORD', 'SUSPICIOUS_LOGIN', 'TRANSACTION', name='verificationcodepurpose'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('used', sa.Boolean(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('verification_code', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_verification_code_created_at'), ['created_at'], unique=False)
+        batch_op.create_index(batch_op.f('ix_verification_code_expires_at'), ['expires_at'], unique=False)
+        batch_op.create_index(batch_op.f('ix_verification_code_user_id'), ['user_id'], unique=False)
+
     op.create_table('transaction',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('from_account_id', sa.Integer(), nullable=False),
@@ -87,6 +103,12 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_transaction_from_account_id'))
 
     op.drop_table('transaction')
+    with op.batch_alter_table('verification_code', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_verification_code_user_id'))
+        batch_op.drop_index(batch_op.f('ix_verification_code_expires_at'))
+        batch_op.drop_index(batch_op.f('ix_verification_code_created_at'))
+
+    op.drop_table('verification_code')
     with op.batch_alter_table('session', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_session_user_id'))
         batch_op.drop_index(batch_op.f('ix_session_starting_time'))

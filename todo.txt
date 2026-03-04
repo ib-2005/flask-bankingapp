@@ -2,10 +2,13 @@
 2. make the other tabs only appear IF they are logged in OR keep it on the central tab 
 3. make a transfer function 
 4. make the sessions thing 
-5. invoke twilio to test phone numbers
-6. make a table that shows incoming transfers
+5. make a table that shows incoming transfers
+6. invoke twilio to test phone numbers
+7. create a forgot password form 
+8. stock options/api
 
-username admin
+username ib
+email paranorman2121@gmail.com
 password 1111
 
 
@@ -16,3 +19,29 @@ user2
 Form has variable amount of submit_transaction fields
 Each submit_transaction field 
 link each button to a transaction
+
+
+
+
+🎯 For Your Banking App
+
+Do this:
+
+/forgot-password → enter email
+
+/verify-code → enter code
+
+/reset-password → set new password
+
+Three clean routes.
+Three clean forms.
+Very professional structure.
+
+
+
+db.session.execute(
+    sa.delete(VerificationCode)
+)
+db.session.commit()
+
+make the new password 2222

@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, flash, redirect, url_for, request
+from flask import Blueprint, render_template, flash, redirect, url_for, request, abort, session
 from flask_login import current_user, login_user, logout_user, login_required
 from decimal import Decimal
-from app.forms import LoginForm, RegistrationForm, MoneyForm, TransferForm, AcceptForm, DeclineForm, CancelForm
-from app.models import User, Account, Transaction, Session, AccountType, TransactionStatus, TransactionType
+from app.forms import LoginForm, RegistrationForm, MoneyForm, TransferForm, RequestResetForm, VerifyCodeForm, ResetPasswordForm
+from app.models import User, Account, Transaction, Session, AccountType, VerificationCode, TransactionStatus, TransactionType, VerificationCodePurpose
 from app.extensions import db
+from app.email import password_email, generate_recovery_code
+from app.services import start_password_reset, clear_password_reset, ensure_utc
 from urllib.parse import urlsplit
 import sqlalchemy as sa 
 from flask_login import login_required
@@ -12,7 +14,6 @@ import logging
 import requests
 
 bp = Blueprint("main", __name__)
-
 logging.basicConfig(level=logging.DEBUG)
 
 @bp.route('/')
@@ -192,3 +193,81 @@ def transfer():
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+@bp.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        abort(403)
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(
+            sa.Select(User)
+            .where(User.email == form.email.data)
+        )
+        
+        if not user:
+            flash('Email not registered with an account')
+            return redirect(url_for('main.forgot_password'))
+
+        if user.get_active_code():
+            flash('There is already an active verification code, please try again')
+            return redirect(url_for('main.forgot_password'))
+        
+        recovery_code = generate_recovery_code()
+        verification_code = VerificationCode(user=user, 
+                                             purpose=VerificationCodePurpose.RESET_PASSWORD)
+        verification_code.set_code_hash(recovery_code)
+        db.session.add(verification_code)
+        db.session.commit()
+        start_password_reset(user, verification_code)
+        session['user_id'] = int(user.id)
+        password_email(session.get('current_email'), recovery_code)
+        return redirect(url_for('main.verify_code'))
+    
+    return render_template('auth/forgot_password.html', form=form)
+
+@bp.route('/verify_code', methods=['GET', 'POST'])
+def verify_code():
+    user = db.session.get(User, session.get('user_id'))
+    verification_code = user.get_active_code()
+    if not verification_code: 
+        abort(403)
+    form = VerifyCodeForm()
+    if form.validate_on_submit():
+        inputted_code = form.code.data
+
+        if not verification_code.check_code(inputted_code):
+            flash('The code does not match.')
+            return redirect(url_for('main.verify_code'))
+        if verification_code.used:
+            flash('Verification code already used')
+            return redirect(url_for('main.verify_code'))
+        expires_at = ensure_utc(verification_code.expires_at)
+        if datetime.now(timezone.utc) > expires_at:
+            flash('Verification code expired!')
+            return redirect(url_for())
+        else:
+            verification_code.used = True
+            db.session.commit()
+            session['is_resetting_password'] = True
+            return redirect(url_for('main.reset_password'))
+    return render_template('auth/verify_code.html', form=form)
+
+@bp.route('/reset_password', methods=['GET', 'POST'])
+def reset_password():
+    user = db.session.get(User, session.get('user_id'))
+    if not session.get('is_resetting_password'):
+        abort(403)
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        if user.check_password(form.new_password2.data):
+            flash('New password cannot be the same as the old one,')
+            return redirect(url_for('main.reset_password'))
+        user.set_password(form.new_password2.data)
+        db.session.commit()
+        flash('Successfully changed password.')
+        login_user(user)
+        clear_password_reset()
+        return redirect(url_for('main.home')) 
+
+    return render_template('auth/reset_password.html', form=form)

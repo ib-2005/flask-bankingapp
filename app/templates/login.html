@@ -21,4 +21,7 @@
     <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
     <p>{{ form.submit() }}</p>
 </form>
+<a href="{{ url_for('main.forgot_password') }}" class="btn btn-primary">
+    Forgot password?
+</a>
 {% endblock %}
